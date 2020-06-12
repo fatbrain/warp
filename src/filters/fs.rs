@@ -129,8 +129,9 @@ fn sanitize_path(base: impl AsRef<Path>, tail: &str) -> Result<PathBuf, Rejectio
     Ok(buf)
 }
 
+/// conditionals
 #[derive(Debug)]
-struct Conditionals {
+pub struct Conditionals {
     if_modified_since: Option<IfModifiedSince>,
     if_unmodified_since: Option<IfUnmodifiedSince>,
     if_range: Option<IfRange>,
@@ -192,7 +193,8 @@ impl Conditionals {
     }
 }
 
-fn conditionals() -> impl Filter<Extract = One<Conditionals>, Error = Infallible> + Copy {
+/// conditionals
+pub fn conditionals() -> impl Filter<Extract = One<Conditionals>, Error = Infallible> + Copy {
     crate::header::optional2()
         .and(crate::header::optional2())
         .and(crate::header::optional2())
@@ -239,9 +241,9 @@ impl File {
     }
 }
 
-// Silly wrapper since Arc<PathBuf> doesn't implement AsRef<Path> ;_;
+/// Silly wrapper since Arc<PathBuf> doesn't implement AsRef<Path> ;_;
 #[derive(Clone, Debug)]
-struct ArcPath(Arc<PathBuf>);
+pub struct ArcPath(pub Arc<PathBuf>);
 
 impl AsRef<Path> for ArcPath {
     fn as_ref(&self) -> &Path {
@@ -255,7 +257,8 @@ impl Reply for File {
     }
 }
 
-fn file_reply(
+/// file reply
+pub fn file_reply(
     path: ArcPath,
     conditionals: Conditionals,
 ) -> impl Future<Output = Result<File, Rejection>> + Send {
