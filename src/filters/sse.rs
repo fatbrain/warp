@@ -54,7 +54,7 @@ use hyper::Body;
 use pin_project::pin_project;
 use serde::Serialize;
 use serde_json;
-use tokio::time::{self, Delay};
+use tokio::time::{self, Sleep};
 
 use self::sealed::{
     BoxedServerSentEvent, EitherServerSentEvent, SseError, SseField, SseFormat, SseWrapper,
@@ -467,7 +467,7 @@ impl KeepAlive {
         S::Ok: ServerSentEvent + Send,
         S::Error: StdError + Send + Sync + 'static,
     {
-        let alive_timer = time::delay_for(self.max_interval);
+        let alive_timer = time::sleep(self.max_interval);
         SseKeepAlive {
             event_stream,
             comment_text: self.comment_text,
@@ -484,7 +484,8 @@ struct SseKeepAlive<S> {
     event_stream: S,
     comment_text: Cow<'static, str>,
     max_interval: Duration,
-    alive_timer: Delay,
+    #[pin]
+    alive_timer: Sleep,
 }
 
 #[doc(hidden)]
@@ -505,7 +506,7 @@ where
     let max_interval = keep_interval
         .into()
         .unwrap_or_else(|| Duration::from_secs(15));
-    let alive_timer = time::delay_for(max_interval);
+    let alive_timer = time::sleep(max_interval);
     SseKeepAlive {
         event_stream,
         comment_text: Cow::Borrowed(""),
@@ -529,6 +530,7 @@ where
 /// use std::convert::Infallible;
 /// use futures::StreamExt;
 /// use tokio::time::interval;
+/// use tokio_stream::wrappers::IntervalStream;
 /// use warp::{Filter, Stream, sse::ServerSentEvent};
 ///
 /// // create server-sent event
@@ -541,7 +543,9 @@ where
 ///         .and(warp::get())
 ///         .map(|| {
 ///             let mut counter: u64 = 0;
-///             let event_stream = interval(Duration::from_secs(15)).map(move |_| {
+///             let interval = interval(Duration::from_secs(15));
+///             let stream = IntervalStream::new(interval);
+///             let event_stream = stream.map(move |_| {
 ///                 counter += 1;
 ///                 sse_counter(counter)
 ///             });
